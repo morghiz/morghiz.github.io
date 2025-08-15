@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NFC Peer-to-Peer Demo</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; text-align: center; }
+        .container { display: flex; flex-direction: column; gap: 20px; }
+        .section { padding: 20px; border: 1px solid #ccc; border-radius: 8px; }
+        textarea { width: 100%; height: 100px; margin-top: 10px; }
+        button { padding: 10px 20px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>NFC P2P Demo</h1>
+    <p>Avvicina i dispositivi per connetterti e scambiare testo.</p>
+
+    <div class="container">
+        <div class="section" id="send-section">
+            <h2>Invia</h2>
+            <p>Scrivi il testo da inviare e tocca il dispositivo.</p>
+            <textarea id="message-to-send" placeholder="Inserisci il testo..."></textarea>
+            <button id="send-button">Invia tramite NFC</button>
+            <p id="send-status"></p>
+        </div>
+
+        <div class="section" id="receive-section">
+            <h2>Ricevi</h2>
+            <p>Tocca il dispositivo per ricevere un messaggio.</p>
+            <p id="received-message"></p>
+            <button id="receive-button">Ricevi tramite NFC</button>
+            <p id="receive-status"></p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const sendButton = document.getElementById('send-button');
+            const receiveButton = document.getElementById('receive-button');
+            const messageInput = document.getElementById('message-to-send');
+            const sendStatus = document.getElementById('send-status');
+            const receiveStatus = document.getElementById('receive-status');
+            const receivedMessageDisplay = document.getElementById('received-message');
+
+            if ('NDEFReader' in window) {
+                // Funzione di invio
+                sendButton.addEventListener('click', async () => {
+                    try {
+                        const ndef = new NDEFReader();
+                        const message = messageInput.value || 'Nessun messaggio inviato.';
+                        sendStatus.textContent = 'Avvicina il dispositivo per inviare...';
+
+                        await ndef.write({
+                            records: [{
+                                recordType: 'text',
+                                data: message
+                            }]
+                        });
+                        sendStatus.textContent = 'Messaggio inviato con successo!';
+                    } catch (error) {
+                        sendStatus.textContent = `Errore di invio: ${error.message}`;
+                    }
+                });
+
+                // Funzione di ricezione
+                receiveButton.addEventListener('click', async () => {
+                    try {
+                        const ndef = new NDEFReader();
+                        receiveStatus.textContent = 'Avvicina il dispositivo per ricevere...';
+
+                        await ndef.scan();
+
+                        ndef.onreading = event => {
+                            const decoder = new TextDecoder();
+                            for (const record of event.message.records) {
+                                if (record.recordType === 'text') {
+                                    const text = decoder.decode(record.data);
+                                    receivedMessageDisplay.textContent = `Messaggio ricevuto: ${text}`;
+                                    receiveStatus.textContent = 'Ricevuto con successo!';
+                                }
+                            }
+                        };
+                    } catch (error) {
+                        receiveStatus.textContent = `Errore di ricezione: ${error.message}`;
+                    }
+                });
+            } else {
+                const message = 'L\'API Web NFC non è supportata da questo browser o dispositivo.';
+                sendStatus.textContent = message;
+                receiveStatus.textContent = message;
+                sendButton.disabled = true;
+                receiveButton.disabled = true;
+            }
+        });
+    </script>
+</body>
+</html>
